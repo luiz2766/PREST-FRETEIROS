@@ -15,15 +15,19 @@ const App: React.FC = () => {
     prestador: '',
     perfilVeiculo: PerfilVeiculo.VUC,
     placa: '',
-    dataPrestacao: new Date().toLocaleDateString('pt-BR')
+    dataPrestacao: '' // Inicializado vazio para evitar Hydration Mismatch
   });
 
   const [items, setItems] = useState<RomaneioItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Garantir que o componente só renderize conteúdo no browser
+  // Hydration Guard e inicialização de data segura (apenas no cliente)
   useEffect(() => {
     setIsMounted(true);
+    setHeader(prev => ({
+      ...prev,
+      dataPrestacao: new Date().toLocaleDateString('pt-BR')
+    }));
   }, []);
 
   const calculateItemValues = (item: Partial<RomaneioItem>, perfil: PerfilVeiculo): RomaneioItem => {
@@ -49,13 +53,12 @@ const App: React.FC = () => {
     }
   }, [header.perfilVeiculo, isMounted]);
 
+  // Se não estiver montado, renderiza apenas um container vazio ou loader simples
+  // Isso evita que o SSR tente renderizar componentes complexos antes do tempo
   if (!isMounted) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-blue-600" size={48} />
-          <p className="text-gray-500 font-medium">Carregando Sistema...</p>
-        </div>
+        <Loader2 className="animate-spin text-blue-600" size={32} />
       </div>
     );
   }
@@ -75,7 +78,7 @@ const App: React.FC = () => {
       alert('Erro ao processar PDF. Verifique o formato do arquivo.');
     } finally {
       setIsProcessing(false);
-      event.target.value = '';
+      if (event.target) event.target.value = '';
     }
   };
 

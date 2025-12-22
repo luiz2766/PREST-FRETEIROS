@@ -1,5 +1,5 @@
 {
-  "name": "Gestor de Prestação de Contas de Freteiros",
+  "name": "Prestação de Contas de Freteiros",
   "description": "Ferramenta profissional para extração de dados de romaneios em PDF, cálculos automáticos de frete por região e veículo, e exportação de relatórios financeiros.",
   "requestFramePermissions": []
 }

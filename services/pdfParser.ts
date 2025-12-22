@@ -3,10 +3,14 @@ import * as pdfjs from 'pdfjs-dist';
 import { CIADE_REGIAO_MAP } from '../constants';
 import { Regiao, RomaneioItem } from '../types';
 
-// Configuração segura do worker: apenas no browser
-if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs`;
-}
+let isPdfInitialized = false;
+
+const initPdfWorker = () => {
+  if (typeof window !== 'undefined' && !isPdfInitialized) {
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs`;
+    isPdfInitialized = true;
+  }
+};
 
 /**
  * Normalizes text for comparison: removes accents, converts to uppercase, 
@@ -25,6 +29,9 @@ export const parsePdfData = async (file: File): Promise<{ items: Partial<Romanei
   if (typeof window === 'undefined') {
     throw new Error("PDF parsing is only supported in the browser.");
   }
+
+  // Inicializa o worker apenas no momento do uso
+  initPdfWorker();
 
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
