@@ -10,6 +10,7 @@ import { generateExcel, generatePdf } from './services/exporter';
 import { FileUp, FileSpreadsheet, FileText, Plus, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
+  const [isMounted, setIsMounted] = useState(false);
   const [header, setHeader] = useState<ReportHeader>({
     prestador: '',
     perfilVeiculo: PerfilVeiculo.VUC,
@@ -20,7 +21,11 @@ const App: React.FC = () => {
   const [items, setItems] = useState<RomaneioItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Função pura de cálculo - Pertence à Camada de Estado
+  // Garantir que o componente só renderize conteúdo no browser
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const calculateItemValues = (item: Partial<RomaneioItem>, perfil: PerfilVeiculo): RomaneioItem => {
     const kmSaida = item.kmSaida ?? null;
     const kmChegada = item.kmChegada ?? null;
@@ -38,26 +43,31 @@ const App: React.FC = () => {
     } as RomaneioItem;
   };
 
-  // Recalcula tudo quando o perfil do veículo muda
   useEffect(() => {
-    if (items.length > 0) {
+    if (isMounted && items.length > 0) {
       setItems(prevItems => prevItems.map(item => calculateItemValues(item, header.perfilVeiculo)));
     }
-  }, [header.perfilVeiculo]);
+  }, [header.perfilVeiculo, isMounted]);
 
-  // Camada 1: Importação
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="animate-spin text-blue-600" size={48} />
+          <p className="text-gray-500 font-medium">Carregando Sistema...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsProcessing(true);
     try {
-      // Chama o Parser isolado
       const { items: extractedItems, plaque } = await parsePdfData(file);
-      
-      // Processa para o modelo de estado interno
       const newItems = extractedItems.map(item => calculateItemValues(item, header.perfilVeiculo));
-      
       setHeader(prev => ({ ...prev, placa: plaque }));
       setItems(newItems);
     } catch (error) {
@@ -65,7 +75,7 @@ const App: React.FC = () => {
       alert('Erro ao processar PDF. Verifique o formato do arquivo.');
     } finally {
       setIsProcessing(false);
-      event.target.value = ''; // Limpa input para permitir novos uploads do mesmo arquivo
+      event.target.value = '';
     }
   };
 
@@ -96,12 +106,10 @@ const App: React.FC = () => {
     setItems(prev => [...prev, calculateItemValues(newItem, header.perfilVeiculo)]);
   };
 
-  // Totais calculados do estado (Camada 2)
   const totalFrete = items.reduce((sum, i) => sum + i.valorFrete, 0);
   const totalDiarista = items.reduce((sum, i) => sum + i.diarista, 0);
   const totalGeral = items.reduce((sum, i) => sum + i.valorTotal, 0);
 
-  // Camada 3: Consumo de dados para Exportação
   const handleExportExcel = () => generateExcel(header, items, totalDiarista, totalFrete, totalGeral);
   const handleExportPdf = () => generatePdf(header, items, totalDiarista, totalFrete, totalGeral);
 
