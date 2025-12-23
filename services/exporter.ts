@@ -9,7 +9,8 @@ const formatCurrency = (val: number) => {
 };
 
 export const generateExcel = (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
-  // Explicitly typing aoaData as any[][] to prevent string[][] inference
+  if (typeof window === 'undefined') return;
+
   const aoaData: any[][] = [
     ['PRESTAÇÃO DE CONTAS DE FRETEIROS'],
     [''],
@@ -52,6 +53,8 @@ export const generateExcel = (header: ReportHeader, items: RomaneioItem[], total
 };
 
 export const generatePdf = (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
+  if (typeof window === 'undefined') return;
+
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   

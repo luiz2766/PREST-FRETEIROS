@@ -11,19 +11,21 @@ import { FileUp, FileSpreadsheet, FileText, Plus, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isMounted, setIsMounted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [items, setItems] = useState<RomaneioItem[]>([]);
+  
+  // Estado inicial estático/determinístico para evitar Hydration Mismatch
   const [header, setHeader] = useState<ReportHeader>({
     prestador: '',
     perfilVeiculo: PerfilVeiculo.VUC,
     placa: '',
-    dataPrestacao: '' // Inicializado vazio para evitar Hydration Mismatch
+    dataPrestacao: '' 
   });
 
-  const [items, setItems] = useState<RomaneioItem[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Hydration Guard e inicialização de data segura (apenas no cliente)
+  // PROTEÇÃO DE HIDRATAÇÃO: Só executa após montar no browser
   useEffect(() => {
     setIsMounted(true);
+    // Dados dinâmicos de runtime injetados apenas no cliente
     setHeader(prev => ({
       ...prev,
       dataPrestacao: new Date().toLocaleDateString('pt-BR')
@@ -47,21 +49,12 @@ const App: React.FC = () => {
     } as RomaneioItem;
   };
 
+  // Recálculo automático quando o perfil do veículo muda
   useEffect(() => {
     if (isMounted && items.length > 0) {
       setItems(prevItems => prevItems.map(item => calculateItemValues(item, header.perfilVeiculo)));
     }
   }, [header.perfilVeiculo, isMounted]);
-
-  // Se não estiver montado, renderiza apenas um container vazio ou loader simples
-  // Isso evita que o SSR tente renderizar componentes complexos antes do tempo
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-blue-600" size={32} />
-      </div>
-    );
-  }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -69,13 +62,15 @@ const App: React.FC = () => {
 
     setIsProcessing(true);
     try {
+      // Import dinâmico ou serviço isolado - chamado apenas via interação
       const { items: extractedItems, plaque } = await parsePdfData(file);
       const newItems = extractedItems.map(item => calculateItemValues(item, header.perfilVeiculo));
+      
       setHeader(prev => ({ ...prev, placa: plaque }));
       setItems(newItems);
     } catch (error) {
-      console.error('Error parsing PDF:', error);
-      alert('Erro ao processar PDF. Verifique o formato do arquivo.');
+      console.error('Erro no processamento do PDF:', error);
+      alert('Falha ao ler o PDF. Verifique se o arquivo está correto.');
     } finally {
       setIsProcessing(false);
       if (event.target) event.target.value = '';
@@ -113,35 +108,42 @@ const App: React.FC = () => {
   const totalDiarista = items.reduce((sum, i) => sum + i.diarista, 0);
   const totalGeral = items.reduce((sum, i) => sum + i.valorTotal, 0);
 
-  const handleExportExcel = () => generateExcel(header, items, totalDiarista, totalFrete, totalGeral);
-  const handleExportPdf = () => generatePdf(header, items, totalDiarista, totalFrete, totalGeral);
+  // Fallback de renderização para evitar SSR incompleto
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <Loader2 className="animate-spin text-blue-600 mb-4" size={48} />
+        <p className="text-gray-500 font-medium">Iniciando aplicação segura...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto animate-in fade-in duration-500">
       <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 flex items-center gap-2">
-            <span className="p-2 bg-blue-600 text-white rounded-lg"><FileText /></span>
+            <span className="p-2 bg-blue-600 text-white rounded-lg shadow-blue-200 shadow-lg"><FileText /></span>
             Prestação de Contas
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold cursor-pointer transition-all shadow-sm">
+          <label className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold cursor-pointer transition-all shadow-md active:scale-95">
             {isProcessing ? <Loader2 className="animate-spin" /> : <FileUp size={20} />}
-            {isProcessing ? 'Processando...' : 'Importar PDF'}
+            {isProcessing ? 'Processando...' : 'Importar Romaneio PDF'}
             <input type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" disabled={isProcessing} />
           </label>
           <button 
-            onClick={handleExportExcel} 
+            onClick={() => generateExcel(header, items, totalDiarista, totalFrete, totalGeral)} 
             disabled={items.length === 0}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition-all"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95"
           >
             <FileSpreadsheet size={20} /> Excel
           </button>
           <button 
-            onClick={handleExportPdf} 
+            onClick={() => generatePdf(header, items, totalDiarista, totalFrete, totalGeral)} 
             disabled={items.length === 0}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition-all"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95"
           >
             <FileText size={20} /> PDF
           </button>
@@ -150,14 +152,26 @@ const App: React.FC = () => {
 
       <HeaderForm header={header} onChange={setHeader} />
 
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-gray-800">Itens do Lançamento</h3>
-        <button onClick={handleAddItem} className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors px-3 py-1 rounded-md hover:bg-blue-50"><Plus size={16} /> Adicionar</button>
+      <div className="flex justify-between items-center mb-4 mt-8">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          Itens de Frete 
+          <span className="bg-gray-200 text-gray-600 text-xs py-1 px-2 rounded-full">{items.length}</span>
+        </h3>
+        <button 
+          onClick={handleAddItem} 
+          className="flex items-center gap-2 text-blue-600 hover:bg-blue-50 font-bold text-sm transition-all px-4 py-2 rounded-xl"
+        >
+          <Plus size={18} /> Adicionar Linha
+        </button>
       </div>
 
       <DataTable items={items} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} />
 
       <SummaryFooter diarista={totalDiarista} totalFrete={totalFrete} totalGeral={totalGeral} />
+      
+      <footer className="mt-12 text-center text-gray-400 text-sm border-t pt-8">
+        Sistema de Prestação de Contas v2.0 - Processamento 100% Client-Side
+      </footer>
     </div>
   );
 };

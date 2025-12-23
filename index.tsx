@@ -2,23 +2,22 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const mountApp = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   const rootElement = document.getElementById('root');
-  if (!rootElement) {
-    console.error("Could not find root element to mount to");
-    return;
-  }
+  if (!rootElement) return;
 
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>
   );
 };
 
-// Executa a montagem
 mountApp();
