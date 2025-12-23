@@ -1,15 +1,12 @@
 
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { ReportHeader, RomaneioItem } from '../types';
 
 const formatCurrency = (val: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 };
 
-export const generateExcel = (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
-  if (typeof window === 'undefined') return;
+export const generateExcel = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
+  const XLSX = await import('xlsx');
 
   const aoaData: any[][] = [
     ['PRESTAÇÃO DE CONTAS DE FRETEIROS'],
@@ -52,8 +49,9 @@ export const generateExcel = (header: ReportHeader, items: RomaneioItem[], total
   XLSX.writeFile(wb, `prestacao_${header.prestador || 'frete'}.xlsx`);
 };
 
-export const generatePdf = (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
-  if (typeof window === 'undefined') return;
+export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
+  const { jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
 
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();

@@ -4,13 +4,9 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const mountApp = () => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-
-  const rootElement = document.getElementById('root');
-  if (!rootElement) return;
-
-  const root = ReactDOM.createRoot(rootElement);
+const container = document.getElementById('root');
+if (container) {
+  const root = ReactDOM.createRoot(container);
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
@@ -18,6 +14,6 @@ const mountApp = () => {
       </ErrorBoundary>
     </React.StrictMode>
   );
-};
-
-mountApp();
+} else {
+  console.error("Erro crítico: Elemento #root não encontrado no DOM.");
+}

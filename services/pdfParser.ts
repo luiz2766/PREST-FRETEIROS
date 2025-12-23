@@ -1,20 +1,9 @@
 
-import * as pdfjs from 'pdfjs-dist';
 import { CIADE_REGIAO_MAP } from '../constants';
 import { Regiao, RomaneioItem } from '../types';
 
-let isPdfInitialized = false;
-
-const initPdfWorker = () => {
-  if (typeof window !== 'undefined' && !isPdfInitialized) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs`;
-    isPdfInitialized = true;
-  }
-};
-
 /**
- * Normalizes text for comparison: removes accents, converts to uppercase, 
- * removes extra spaces.
+ * Normalizes text for comparison
  */
 const normalizeText = (text: string) => {
   return text
@@ -26,12 +15,9 @@ const normalizeText = (text: string) => {
 };
 
 export const parsePdfData = async (file: File): Promise<{ items: Partial<RomaneioItem>[], plaque: string }> => {
-  if (typeof window === 'undefined') {
-    throw new Error("PDF parsing is only supported in the browser.");
-  }
-
-  // Inicializa o worker apenas no momento do uso
-  initPdfWorker();
+  // Dynamic import para evitar erros de SSR e top-level window access
+  const pdfjs = await import('pdfjs-dist');
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs`;
 
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
