@@ -26,12 +26,28 @@ export interface RomaneioItem {
   retornoZero: number;
   diarista: number;
   valorFrete: number;
+  produtos: string;
+  quantidadeCx: number;
+  quantidadeUn: number;
+  vale: number;
   valorTotal: number;
 }
 
 export interface ReportHeader {
+  id?: string;
   prestador: string;
   perfilVeiculo: PerfilVeiculo;
   placa: string;
   dataPrestacao: string;
+  created_at?: string;
+}
+
+export interface DashboardStats {
+  totalValorFrete: number;
+  totalFretes: number;
+  mediaFretePorDia: number;
+  totalDiarista: number;
+  totalVales: number;
+  totalGeral: number;
+  topRegioes: { regiao: string; total: number }[];
 }

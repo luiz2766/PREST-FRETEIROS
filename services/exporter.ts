@@ -5,7 +5,7 @@ const formatCurrency = (val: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 };
 
-export const generateExcel = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
+export const generateExcel = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalVale: number, totalFrete: number, totalGeral: number) => {
   const XLSX = await import('xlsx');
 
   const aoaData: any[][] = [
@@ -17,7 +17,7 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
     ['Placa:', header.placa],
     ['Data de Prestação:', header.dataPrestacao],
     [''],
-    ['Data', 'Romaneio', 'Região', 'KM Saída', 'KM Chegada', 'KM Rodado', 'Diarista', 'Retorno 0', 'Valor Frete', 'Valor Total']
+    ['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'KM Saída', 'KM Chegada', 'Diarista', 'Valor Frete', 'Vale', 'Total Líquido']
   ];
 
   items.forEach(i => {
@@ -25,23 +25,26 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
       i.data,
       i.romaneio,
       i.regiao,
+      i.produtos || '',
+      i.quantidadeCx || 0,
+      i.quantidadeUn || 0,
       i.kmSaida || 0,
       i.kmChegada || 0,
-      i.kmRodado,
       i.diarista,
-      i.retornoZero,
       i.valorFrete,
+      i.vale,
       i.valorTotal
     ]);
   });
 
   aoaData.push(['']);
-  aoaData.push(['', '', '', '', '', '', '', '', 'TOTAL DIARISTA:', totalDiarista]);
-  aoaData.push(['', '', '', '', '', '', '', '', 'TOTAL FRETE:', totalFrete]);
-  aoaData.push(['', '', '', '', '', '', '', '', 'TOTAL GERAL:', totalGeral]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL DIARISTA:', totalDiarista]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL VALES:', totalVale]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL FRETE:', totalFrete]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL LÍQUIDO:', totalGeral]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoaData);
-  const colWidths = [{ wch: 12 }, { wch: 12 }, { wch: 25 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
+  const colWidths = [{ wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
   ws['!cols'] = colWidths;
 
   const wb = XLSX.utils.book_new();
@@ -49,7 +52,7 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
   XLSX.writeFile(wb, `prestacao_${header.prestador || 'frete'}.xlsx`);
 };
 
-export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalFrete: number, totalGeral: number) => {
+export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], totalDiarista: number, totalVale: number, totalFrete: number, totalGeral: number) => {
   const { jsPDF } = await import('jspdf');
   const { default: autoTable } = await import('jspdf-autotable');
 
@@ -71,32 +74,33 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
   
   autoTable(doc, {
     startY: 45,
-    head: [['Data', 'Romaneio', 'Região', 'KM Saída', 'KM Chegada', 'KM Rodado', 'Diarista', 'Retorno 0', 'V. Frete', 'V. Total']],
+    head: [['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Diarista', 'V. Frete', 'Vale', 'Total Líq']],
     body: items.map(i => [
       i.data, 
       i.romaneio, 
       i.regiao, 
-      i.kmSaida || '-', 
-      i.kmChegada || '-', 
-      i.kmRodado, 
+      i.produtos || '-',
+      i.quantidadeCx || 0,
+      i.quantidadeUn || 0,
       formatCurrency(i.diarista), 
-      formatCurrency(i.retornoZero), 
       formatCurrency(i.valorFrete), 
+      formatCurrency(i.vale), 
       formatCurrency(i.valorTotal)
     ]),
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 7, cellPadding: 1.5 },
     headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [249, 250, 251] },
   });
   
   const finalY = (doc as any).lastAutoTable.finalY + 10;
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text(`TOTAL DIARISTA: ${formatCurrency(totalDiarista)}`, pageWidth - 14, finalY, { align: 'right' });
-  doc.text(`TOTAL FRETE: ${formatCurrency(totalFrete)}`, pageWidth - 14, finalY + 6, { align: 'right' });
-  doc.setFontSize(12);
+  doc.text(`TOTAL VALES: ${formatCurrency(totalVale)}`, pageWidth - 14, finalY + 5, { align: 'right' });
+  doc.text(`TOTAL FRETE: ${formatCurrency(totalFrete)}`, pageWidth - 14, finalY + 10, { align: 'right' });
+  doc.setFontSize(11);
   doc.setTextColor(37, 99, 235);
-  doc.text(`TOTAL GERAL (COM RETORNO): ${formatCurrency(totalGeral)}`, pageWidth - 14, finalY + 14, { align: 'right' });
+  doc.text(`TOTAL LÍQUIDO A PAGAR: ${formatCurrency(totalGeral)}`, pageWidth - 14, finalY + 17, { align: 'right' });
 
   doc.save(`prestacao_${header.prestador || 'frete'}.pdf`);
 };
