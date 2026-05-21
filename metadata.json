@@ -2,5 +2,7 @@
   "name": "Prestação de Contas de Freteiros",
   "description": "Ferramenta profissional para extração de dados de romaneios em PDF, cálculos automáticos de frete por região e veículo, e exportação de relatórios financeiros.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
