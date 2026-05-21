@@ -31,11 +31,23 @@ function getSupabase() {
 }
 
 // API Routes
+app.get('/api/health', async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase.from('reports').select('count', { count: 'exact', head: true });
+    if (error) throw error;
+    res.json({ status: 'ok', supabase: 'connected', count: data });
+  } catch (error: any) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
 app.get('/api/reports', async (req, res) => {
   const { startDate, endDate, placa } = req.query;
   
   try {
     const supabase = getSupabase();
+    console.log(`[INFO] Fetching reports... Filters: startDate=${startDate}, endDate=${endDate}, placa=${placa}`);
     let query = supabase
       .from('reports')
       .select(`
@@ -50,7 +62,11 @@ app.get('/api/reports', async (req, res) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('[ERROR] Supabase reports fetch failed:', error);
+      throw error;
+    }
+    console.log(`[INFO] Found ${data?.length || 0} reports.`);
     res.json(data);
   } catch (error: any) {
     console.error('API Error (/api/reports):', error.message);
@@ -60,6 +76,7 @@ app.get('/api/reports', async (req, res) => {
 
 app.post('/api/reports', async (req, res) => {
   const { header, items } = req.body;
+  console.log('[INFO] Saving new report for:', header.prestador);
 
   try {
     const supabase = getSupabase();
@@ -75,7 +92,12 @@ app.post('/api/reports', async (req, res) => {
       .select()
       .single();
 
-    if (headerError) throw headerError;
+    if (headerError) {
+      console.error('[ERROR] Supabase header insert failed:', headerError);
+      throw headerError;
+    }
+
+    console.log('[INFO] Header saved with ID:', headerData.id);
 
     // 2. Insert items
     const itemsToInsert = items.map((item: any) => ({
@@ -100,11 +122,108 @@ app.post('/api/reports', async (req, res) => {
       .from('report_items')
       .insert(itemsToInsert);
 
-    if (itemsError) throw itemsError;
+    if (itemsError) {
+      console.error('[ERROR] Supabase items insert failed:', itemsError);
+      throw itemsError;
+    }
 
+    console.log(`[INFO] Saved ${itemsToInsert.length} items successfully.`);
     res.json({ success: true, id: headerData.id });
   } catch (error: any) {
     console.error('API Error (POST /api/reports):', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/reports/:id', async (req, res) => {
+  const { id } = req.params;
+  const { header, items } = req.body;
+  console.log('[INFO] Updating report ID:', id);
+
+  try {
+    const supabase = getSupabase();
+    
+    // 1. Update header
+    const { error: headerError } = await supabase
+      .from('reports')
+      .update({
+        prestador: header.prestador,
+        perfil_veiculo: header.perfilVeiculo,
+        placa: header.placa,
+        data_prestacao: header.dataPrestacao
+      })
+      .eq('id', id);
+
+    if (headerError) {
+      console.error('[ERROR] Supabase header update failed:', headerError);
+      throw headerError;
+    }
+
+    // 2. Delete old items
+    const { error: deleteError } = await supabase
+      .from('report_items')
+      .delete()
+      .eq('report_id', id);
+
+    if (deleteError) {
+      console.error('[ERROR] Supabase items delete failed:', deleteError);
+      throw deleteError;
+    }
+
+    // 3. Insert new items
+    const itemsToInsert = items.map((item: any) => ({
+      report_id: id,
+      data: item.data,
+      romaneio: item.romaneio,
+      regiao: item.regiao,
+      km_saida: item.kmSaida,
+      km_chegada: item.kmChegada,
+      km_rodado: item.kmRodado,
+      retorno_zero: item.retornoZero,
+      diarista: item.diarista,
+      valor_frete: item.valorFrete,
+      produtos: item.produtos,
+      quantidade_cx: item.quantidadeCx,
+      quantidade_un: item.quantidadeUn,
+      vale: item.vale,
+      valor_total: item.valorTotal
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('report_items')
+      .insert(itemsToInsert);
+
+    if (itemsError) {
+      console.error('[ERROR] Supabase items re-insert failed:', itemsError);
+      throw itemsError;
+    }
+
+    console.log('[INFO] Update completed successfully.');
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error(`API Error (PUT /api/reports/${id}):`, error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/reports/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const supabase = getSupabase();
+    
+    // items should be deleted automatically if CASCADE is setup, 
+    // but better be safe or handle manually if not.
+    // For now we assume typical Supabase behavior or manual if needed.
+    const { error } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error(`API Error (DELETE /api/reports/${id}):`, error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -165,7 +284,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

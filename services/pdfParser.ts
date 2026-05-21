@@ -17,7 +17,8 @@ const normalizeText = (text: string) => {
 export const parsePdfData = async (file: File): Promise<{ items: Partial<RomaneioItem>[], plaque: string }> => {
   // Dynamic import para evitar erros de SSR e top-level window access
   const pdfjs = await import('pdfjs-dist');
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs`;
+  const pdfjsVersion = pdfjs.version;
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.mjs`;
 
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
@@ -31,7 +32,7 @@ export const parsePdfData = async (file: File): Promise<{ items: Partial<Romanei
     fullText += pageText + '  [PAGE_BREAK]  ';
   }
 
-  const romaneioHeaderRegex = /Romaneio\s+(\d{4}\/\d{2}\/\d{2})-(\d+)/g;
+  const romaneioHeaderRegex = /Romaneio\s+(\d{2,4}\/\d{2}\/\d{2,4})-(\d+)/g;
   const blocks: { text: string, data: string, romaneio: string }[] = [];
   let match;
   const indices: number[] = [];
@@ -45,12 +46,22 @@ export const parsePdfData = async (file: File): Promise<{ items: Partial<Romanei
     const end = indices[i + 1] || fullText.length;
     const blockText = fullText.substring(start, end);
     
-    const infoMatch = /Romaneio\s+(\d{4}\/\d{2}\/\d{2})-(\d+)/.exec(blockText);
+    const infoMatch = /Romaneio\s+(\d{2,4}\/\d{2}\/\d{2,4})-(\d+)/.exec(blockText);
     if (infoMatch) {
-      const [y, m, d] = infoMatch[1].split('/');
+      const dateParts = infoMatch[1].split('/');
+      let y, m, d;
+      
+      if (dateParts[0].length === 4) {
+        // YYYY/MM/DD
+        [y, m, d] = dateParts;
+      } else {
+        // DD/MM/YYYY
+        [d, m, y] = dateParts;
+      }
+      
       blocks.push({
         text: blockText,
-        data: `${d}/${m}/${y}`,
+        data: `${y}-${m}-${d}`,
         romaneio: infoMatch[2]
       });
     }

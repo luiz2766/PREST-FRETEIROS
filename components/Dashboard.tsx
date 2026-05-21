@@ -16,7 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats }) => {
     { title: 'Quantidade de Fretes', value: stats.totalFretes.toString(), icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { title: 'Média de Fretes / Dia', value: stats.mediaFretePorDia.toFixed(1), icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-50' },
     { title: 'Total Vales (Deduções)', value: `-${formatCurrency(stats.totalVales)}`, icon: ArrowDownRight, color: 'text-red-600', bg: 'bg-red-50' },
-    { title: 'Diaristas', value: formatCurrency(stats.totalDiarista), icon: TrendingUp, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { title: 'Outros (Ajudantes)', value: formatCurrency(stats.totalDiarista), icon: TrendingUp, color: 'text-orange-600', bg: 'bg-orange-50' },
     { title: 'Total Líquido', value: formatCurrency(stats.totalGeral), icon: DollarSign, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   ];
 

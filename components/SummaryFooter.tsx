@@ -16,7 +16,7 @@ const SummaryFooter: React.FC<SummaryFooterProps> = ({ diarista, totalFrete, tot
   return (
     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-        <span className="text-sm font-semibold text-gray-500 uppercase">Diarista Ajudante</span>
+        <span className="text-sm font-semibold text-gray-500 uppercase">Outros (Ajudantes/Custos)</span>
         <span className={`text-3xl font-bold mt-2 ${diarista > 0 ? 'text-green-600' : 'text-gray-400'}`}>
           {formatCurrency(diarista)}
         </span>

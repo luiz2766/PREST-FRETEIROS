@@ -8,7 +8,7 @@ import { PerfilVeiculo, ReportHeader, RomaneioItem, Regiao, DashboardStats } fro
 import { FRETE_TABLE } from './constants';
 import { parsePdfData } from './services/pdfParser';
 import { generateExcel, generatePdf } from './services/exporter';
-import { FileUp, FileSpreadsheet, FileText, Plus, Loader2, BarChart3, List, History, Save, Search, X, Calendar } from 'lucide-react';
+import { FileUp, FileSpreadsheet, FileText, Plus, Loader2, BarChart3, List, History, Save, Search, X, Calendar, Pencil, Trash2, RotateCcw } from 'lucide-react';
 
 const App: React.FC = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -16,6 +16,9 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'editor' | 'dashboard' | 'history'>('editor');
   const [items, setItems] = useState<RomaneioItem[]>([]);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   
   const [header, setHeader] = useState<ReportHeader>({
     prestador: '',
@@ -40,6 +43,18 @@ const App: React.FC = () => {
       ...prev,
       dataPrestacao: today
     }));
+
+    // Check connectivity
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'error') {
+          setConfigError(`Banco de dados desconectado: ${data.message}`);
+        }
+      })
+      .catch(err => {
+        console.error('Falha no health check:', err);
+      });
   }, []);
 
   const calculateItemValues = (item: Partial<RomaneioItem>, perfil: PerfilVeiculo): RomaneioItem => {
@@ -115,30 +130,113 @@ const App: React.FC = () => {
     setItems(prev => [...prev, calculateItemValues(newItem, header.perfilVeiculo)]);
   };
 
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
   const saveToHistory = async () => {
+    console.log('[DEBUG] saveToHistory called');
     if (!header.prestador || !header.placa || items.length === 0) {
-      alert('Preencha o prestador, placa e adicione itens antes de salvar.');
+      console.warn('[DEBUG] Validation failed:', { prestador: !!header.prestador, placa: !!header.placa, items: items.length });
+      showNotification('Preencha o prestador, placa e adicione itens antes de salvar.', 'error');
       return;
     }
 
     setIsSaving(true);
     try {
-      const response = await fetch('/api/reports', {
-        method: 'POST',
+      const url = editingReportId ? `/api/reports/${editingReportId}` : '/api/reports';
+      const method = editingReportId ? 'PUT' : 'POST';
+      
+      console.log(`[DEBUG] Sending ${method} to ${url}`, { header, itemsCount: items.length });
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ header, items })
       });
+
+      console.log(`[DEBUG] Response status: ${response.status}`);
+
       if (response.ok) {
-        alert('Prestação de contas salva com sucesso!');
-        setItems([]);
-        setHeader(prev => ({ ...prev, placa: '', prestador: '' }));
+        const result = await response.json();
+        console.log('[DEBUG] Save successful:', result);
+        showNotification(editingReportId ? 'Histórico atualizado com sucesso!' : 'Prestação de contas salva com sucesso!', 'success');
+        resetEditor();
+        
+        fetchDashboard();
+        fetchHistory();
       } else {
-        throw new Error('Falha ao salvar');
+        const errorData = await response.json();
+        console.error('[DEBUG] Save failed errorData:', errorData);
+        throw new Error(errorData.error || 'Falha ao salvar');
       }
-    } catch (err) {
-      alert('Erro ao salvar no banco de dados.');
+    } catch (err: any) {
+      console.error('[DEBUG] saveToHistory catch error:', err);
+      showNotification(`Erro ao salvar: ${err.message}`, 'error');
+      if (err.message.includes('Supabase environment variables')) {
+        setConfigError('Configuração do Banco de Dados pendente. Por favor, configure as chaves do Supabase nas configurações do app.');
+      }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const resetEditor = () => {
+    setItems([]);
+    setEditingReportId(null);
+    const today = new Date().toISOString().split('T')[0];
+    setHeader({
+      prestador: '',
+      perfilVeiculo: PerfilVeiculo.VUC,
+      placa: '',
+      dataPrestacao: today
+    });
+  };
+
+  const loadReportForEditing = (report: any) => {
+    setEditingReportId(report.id);
+    setHeader({
+      prestador: report.prestador,
+      perfilVeiculo: report.perfil_veiculo as PerfilVeiculo,
+      placa: report.placa,
+      dataPrestacao: report.data_prestacao
+    });
+    
+    const mappedItems = report.report_items.map((item: any) => ({
+      id: item.id,
+      data: item.data,
+      romaneio: item.romaneio,
+      regiao: item.regiao as Regiao,
+      kmSaida: item.km_saida,
+      kmChegada: item.km_chegada,
+      kmRodado: item.km_rodado,
+      retornoZero: item.retorno_zero,
+      diarista: item.diarista,
+      valorFrete: item.valor_frete,
+      produtos: item.produtos,
+      quantidadeCx: item.quantidade_cx,
+      quantidadeUn: item.quantidade_un,
+      vale: item.vale,
+      valorTotal: item.valor_total
+    }));
+    
+    setItems(mappedItems);
+    setActiveTab('editor');
+  };
+
+  const deleteReport = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este registro do histórico?')) return;
+    
+    try {
+      const response = await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        showNotification('Registro excluído com sucesso!', 'success');
+        fetchHistory();
+        fetchDashboard();
+      }
+    } catch (err) {
+      showNotification('Erro ao excluir registro.', 'error');
     }
   };
 
@@ -146,7 +244,13 @@ const App: React.FC = () => {
     try {
       const response = await fetch('/api/dashboard');
       const data = await response.json();
-      setDashboardStats(data);
+      if (response.ok) {
+        setDashboardStats(data);
+      } else {
+        if (data.error?.includes('Supabase environment variables')) {
+          setConfigError('Supabase não configurado.');
+        }
+      }
     } catch (err) {
       console.error('Erro ao buscar dashboard:', err);
     }
@@ -157,7 +261,9 @@ const App: React.FC = () => {
       const params = new URLSearchParams(filters);
       const response = await fetch(`/api/reports?${params.toString()}`);
       const data = await response.json();
-      setHistory(data);
+      if (response.ok) {
+        setHistory(data);
+      }
     } catch (err) {
       console.error('Erro ao buscar histórico:', err);
     }
@@ -167,6 +273,14 @@ const App: React.FC = () => {
     if (activeTab === 'dashboard') fetchDashboard();
     if (activeTab === 'history') fetchHistory();
   }, [activeTab, fetchDashboard, fetchHistory]);
+
+  // Initial fetch for all data
+  useEffect(() => {
+    if (isMounted) {
+      fetchDashboard();
+      fetchHistory();
+    }
+  }, [isMounted, fetchDashboard, fetchHistory]);
 
   const totalFrete = items.reduce((sum, i) => sum + i.valorFrete, 0);
   const totalDiarista = items.reduce((sum, i) => sum + i.diarista, 0);
@@ -178,7 +292,35 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto bg-gray-50/30">
+    <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto bg-gray-50/30 relative">
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 border ${
+          notification.type === 'success' ? 'bg-emerald-50 text-emerald-800 border-emerald-100' : 
+          notification.type === 'error' ? 'bg-red-50 text-red-800 border-red-100' : 
+          'bg-blue-50 text-blue-800 border-blue-100'
+        }`}>
+          <div className={`p-2 rounded-xl ${
+            notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 
+            notification.type === 'error' ? 'bg-red-100 text-red-600' : 
+            'bg-blue-100 text-blue-600'
+          }`}>
+            {notification.type === 'success' ? <Plus size={20} /> : notification.type === 'error' ? <X size={20} /> : <Search size={20} />}
+          </div>
+          <p className="font-bold text-sm">{notification.message}</p>
+          <button onClick={() => setNotification(null)} className="ml-2 hover:opacity-70"><X size={16}/></button>
+        </div>
+      )}
+
+      {configError && (
+        <div className="mb-6 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex items-center gap-3 text-orange-800 animate-in fade-in zoom-in duration-300">
+           <div className="p-2 bg-orange-100 rounded-xl"><Plus size={20} className="rotate-45" /></div>
+           <div>
+              <p className="font-black text-sm uppercase tracking-tight">Aviso de Configuração</p>
+              <p className="text-xs font-medium opacity-80">{configError}</p>
+           </div>
+        </div>
+      )}
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-gray-100">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
@@ -228,7 +370,15 @@ const App: React.FC = () => {
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-black shadow-lg shadow-indigo-100 disabled:opacity-50 transition-all active:scale-95"
               >
                 {isSaving ? <Loader2 className="animate-spin" /> : <Save size={22} />}
-                Salvar Histórico
+                {editingReportId ? 'Atualizar Histórico' : 'Salvar Histórico'}
+              </button>
+
+              <button 
+                onClick={resetEditor}
+                className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-500 border border-gray-200 px-6 py-3 rounded-2xl font-black transition-all shadow-sm active:scale-95"
+              >
+                <RotateCcw size={22} />
+                Limpar / Novo
               </button>
             </div>
 
@@ -324,13 +474,99 @@ const App: React.FC = () => {
                       <p className="text-xs text-gray-400 font-bold uppercase">{report.perfil_veiculo} • {new Date(report.data_prestacao).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-gray-400 uppercase">Total Líquido</p>
-                    <p className="text-2xl font-black text-blue-600">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                        report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_total) || 0), 0)
-                      )}
-                    </p>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                       <button 
+                          onClick={() => {
+                            const totalDiarista = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.diarista) || 0), 0);
+                            const totalVale = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.vale) || 0), 0);
+                            const totalFrete = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_frete) || 0), 0);
+                            const totalGeral = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_total) || 0), 0);
+                            generateExcel({
+                                prestador: report.prestador,
+                                perfilVeiculo: report.perfil_veiculo,
+                                placa: report.placa,
+                                dataPrestacao: report.data_prestacao
+                            }, 
+                            report.report_items.map((i: any) => ({
+                                data: i.data,
+                                romaneio: i.romaneio,
+                                regiao: i.regiao,
+                                produtos: i.produtos,
+                                quantidadeCx: i.quantidade_cx,
+                                quantidadeUn: i.quantidade_un,
+                                kmSaida: i.km_saida,
+                                kmChegada: i.km_chegada,
+                                diarista: i.diarista,
+                                valorFrete: i.valor_frete,
+                                vale: i.vale,
+                                valorTotal: i.valor_total
+                            })), 
+                            totalDiarista, totalVale, totalFrete, totalGeral);
+                          }}
+                          className="p-3 bg-white hover:bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl transition-all shadow-sm"
+                          title="Exportar Excel"
+                        >
+                          <FileSpreadsheet size={24} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            const totalDiarista = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.diarista) || 0), 0);
+                            const totalVale = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.vale) || 0), 0);
+                            const totalFrete = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_frete) || 0), 0);
+                            const totalGeral = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_total) || 0), 0);
+                            generatePdf({
+                                prestador: report.prestador,
+                                perfilVeiculo: report.perfil_veiculo,
+                                placa: report.placa,
+                                dataPrestacao: report.data_prestacao
+                            }, 
+                            report.report_items.map((i: any) => ({
+                                data: i.data,
+                                romaneio: i.romaneio,
+                                regiao: i.regiao,
+                                produtos: i.produtos,
+                                quantidadeCx: i.quantidade_cx,
+                                quantidadeUn: i.quantidade_un,
+                                kmSaida: i.km_saida,
+                                kmChegada: i.km_chegada,
+                                diarista: i.diarista,
+                                valorFrete: i.valor_frete,
+                                vale: i.vale,
+                                valorTotal: i.valor_total
+                            })), 
+                            totalDiarista, totalVale, totalFrete, totalGeral);
+                          }}
+                          className="p-3 bg-white hover:bg-red-50 text-red-600 border border-red-100 rounded-xl transition-all shadow-sm"
+                          title="Exportar PDF"
+                        >
+                          <FileText size={24} />
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 border-l border-gray-200 pl-4 ml-2">
+                      <button 
+                         onClick={() => loadReportForEditing(report)}
+                         className="flex items-center gap-1.5 px-4 py-2 bg-white text-blue-600 border border-blue-100 rounded-xl font-bold shadow-sm hover:shadow-md transition-all"
+                      >
+                         <Pencil size={16} /> Editar
+                      </button>
+                      <button 
+                         onClick={() => deleteReport(report.id)}
+                         className="flex items-center gap-1.5 px-4 py-2 bg-white text-red-600 border border-red-100 rounded-xl font-bold shadow-sm hover:shadow-md transition-all"
+                      >
+                         <Trash2 size={16} /> Excluir
+                      </button>
+                    </div>
+
+                    <div className="text-right ml-4">
+                      <p className="text-xs font-bold text-gray-400 uppercase">Total Líquido</p>
+                      <p className="text-2xl font-black text-blue-600">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                          report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_total) || 0), 0)
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="overflow-x-auto">

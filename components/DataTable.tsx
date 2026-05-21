@@ -26,11 +26,11 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
               <th className="px-4 py-4 min-w-[140px]">Produtos</th>
               <th className="px-4 py-4 min-w-[60px]">CX</th>
               <th className="px-4 py-4 min-w-[60px]">UN</th>
+              <th className="px-4 py-4 min-w-[100px]">Vale</th>
               <th className="px-4 py-4 min-w-[100px]">KM Saída</th>
               <th className="px-4 py-4 min-w-[100px]">KM Chegada</th>
-              <th className="px-4 py-4 min-w-[100px]">Diarista</th>
+              <th className="px-4 py-4 min-w-[100px]">Outros</th>
               <th className="px-4 py-4 min-w-[120px]">Vlr Frete</th>
-              <th className="px-4 py-4 min-w-[100px]">Vale</th>
               <th className="px-4 py-4 min-w-[120px]">Total Líq</th>
               <th className="px-4 py-4 text-center">Ações</th>
             </tr>
@@ -97,6 +97,18 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
                       className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none text-center"
                     />
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center">
+                      <span className="text-[10px] text-red-300 mr-1">R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.vale || ''}
+                        onChange={(e) => onUpdateItem(item.id, { vale: Number(e.target.value) })}
+                        className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none font-black text-red-600"
+                      />
+                    </div>
+                  </td>
                   <td className={`px-4 py-3 ${isKmError ? 'bg-red-50' : ''}`}>
                     <input
                       type="number"
@@ -129,18 +141,6 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
                   </td>
                   <td className="px-4 py-3 font-black text-blue-600 bg-blue-50/20">
                     {formatCurrency(item.valorFrete)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <span className="text-[10px] text-red-300 mr-1">R$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={item.vale || ''}
-                        onChange={(e) => onUpdateItem(item.id, { vale: Number(e.target.value) })}
-                        className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none font-black text-red-600"
-                      />
-                    </div>
                   </td>
                   <td className="px-4 py-3 font-black text-gray-900 bg-gray-50/50">
                     {formatCurrency(item.valorTotal)}

@@ -17,7 +17,7 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
     ['Placa:', header.placa],
     ['Data de Prestação:', header.dataPrestacao],
     [''],
-    ['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'KM Saída', 'KM Chegada', 'Diarista', 'Valor Frete', 'Vale', 'Total Líquido']
+    ['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Vale', 'KM Saída', 'KM Chegada', 'Outros', 'Valor Frete', 'Total Líquido']
   ];
 
   items.forEach(i => {
@@ -28,17 +28,17 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
       i.produtos || '',
       i.quantidadeCx || 0,
       i.quantidadeUn || 0,
+      i.vale || 0,
       i.kmSaida || 0,
       i.kmChegada || 0,
-      i.diarista,
+      i.diarista || 0,
       i.valorFrete,
-      i.vale,
       i.valorTotal
     ]);
   });
 
   aoaData.push(['']);
-  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL DIARISTA:', totalDiarista]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'OUTROS (AJUDANTES):', totalDiarista]);
   aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL VALES:', totalVale]);
   aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL FRETE:', totalFrete]);
   aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL LÍQUIDO:', totalGeral]);
@@ -74,7 +74,7 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
   
   autoTable(doc, {
     startY: 45,
-    head: [['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Diarista', 'V. Frete', 'Vale', 'Total Líq']],
+    head: [['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Vale', 'Outros', 'V. Frete', 'Total Líq']],
     body: items.map(i => [
       i.data, 
       i.romaneio, 
@@ -82,9 +82,9 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
       i.produtos || '-',
       i.quantidadeCx || 0,
       i.quantidadeUn || 0,
+      formatCurrency(i.vale),
       formatCurrency(i.diarista), 
       formatCurrency(i.valorFrete), 
-      formatCurrency(i.vale), 
       formatCurrency(i.valorTotal)
     ]),
     styles: { fontSize: 7, cellPadding: 1.5 },
@@ -95,7 +95,7 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(`TOTAL DIARISTA: ${formatCurrency(totalDiarista)}`, pageWidth - 14, finalY, { align: 'right' });
+  doc.text(`OUTROS: ${formatCurrency(totalDiarista)}`, pageWidth - 14, finalY, { align: 'right' });
   doc.text(`TOTAL VALES: ${formatCurrency(totalVale)}`, pageWidth - 14, finalY + 5, { align: 'right' });
   doc.text(`TOTAL FRETE: ${formatCurrency(totalFrete)}`, pageWidth - 14, finalY + 10, { align: 'right' });
   doc.setFontSize(11);
