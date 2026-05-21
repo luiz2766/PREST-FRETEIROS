@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
@@ -276,6 +275,7 @@ app.get('/api/dashboard', async (req, res) => {
 // Vite Middleware for Dev, Static for Prod
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -285,18 +285,26 @@ async function startServer() {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     
-    // Fallback for SPA - MUST be after static and API routes
-    app.use((req, res, next) => {
-      if (req.path.startsWith('/api')) {
-        return next();
-      }
-      res.sendFile(path.join(distPath, 'index.html'));
+    // API 404 handler - if no API route matched
+    app.use('/api', (req, res) => {
+      console.warn(`[WARN] 404 on API route: ${req.method} ${req.path}`);
+      res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
+    });
+
+    // Fallback for SPA - Correct syntax for Express 5
+    app.get('*all', (req, res) => {
+      const indexPath = path.resolve(distPath, 'index.html');
+      console.log(`[INFO] Serving SPA fallback for ${req.path} -> ${indexPath}`);
+      res.sendFile(indexPath);
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  }
 }
 
+export default app; // Export for Vercel
 startServer();

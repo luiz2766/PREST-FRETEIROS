@@ -167,9 +167,20 @@ const App: React.FC = () => {
         fetchDashboard();
         fetchHistory();
       } else {
-        const errorData = await response.json();
-        console.error('[DEBUG] Save failed errorData:', errorData);
-        throw new Error(errorData.error || 'Falha ao salvar');
+        const contentType = response.headers.get('content-type');
+        let errorMessage = 'Falha ao salvar';
+        
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } else {
+          const errorText = await response.text();
+          console.error('[DEBUG] Non-JSON error response:', errorText.substring(0, 500));
+          errorMessage = `Erro do Servidor (${response.status}): Requisicao retornou HTML em vez de JSON. Verifique as rotas da API.`;
+        }
+        
+        console.error('[DEBUG] Save failed:', errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (err: any) {
       console.error('[DEBUG] saveToHistory catch error:', err);
