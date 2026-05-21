@@ -210,10 +210,6 @@ app.delete('/api/reports/:id', async (req, res) => {
 
   try {
     const supabase = getSupabase();
-    
-    // items should be deleted automatically if CASCADE is setup, 
-    // but better be safe or handle manually if not.
-    // For now we assume typical Supabase behavior or manual if needed.
     const { error } = await supabase
       .from('reports')
       .delete()
@@ -250,13 +246,12 @@ app.get('/api/dashboard', async (req, res) => {
       totalVales: data.reduce((sum, i) => sum + (Number(i.vale) || 0), 0),
       totalGeral: data.reduce((sum, i) => sum + (Number(i.valor_total) || 0), 0),
       topRegioes: [] as { regiao: string; total: number }[],
+      mediaFretePorDia: 0
     };
 
-    // Calc average per day
     const uniqueDays = new Set(data.map(i => i.data)).size;
     stats.mediaFretePorDia = uniqueDays > 0 ? stats.totalFretes / uniqueDays : 0;
 
-    // Calc top regions
     const regionMap: Record<string, number> = {};
     data.forEach(i => {
       regionMap[i.regiao] = (regionMap[i.regiao] || 0) + 1;
@@ -272,8 +267,22 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// Vite Middleware for Dev, Static for Prod
-async function startServer() {
+// Production Handlers
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
+  });
+
+  app.get('*all', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+// Dev Handler
+async function setupDev() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -281,30 +290,20 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
     
-    // API 404 handler - if no API route matched
-    app.use('/api', (req, res) => {
-      console.warn(`[WARN] 404 on API route: ${req.method} ${req.path}`);
-      res.status(404).json({ error: `API route not found: ${req.method} ${req.path}` });
-    });
-
-    // Fallback for SPA - Correct syntax for Express 5
-    app.get('*all', (req, res) => {
-      const indexPath = path.resolve(distPath, 'index.html');
-      console.log(`[INFO] Serving SPA fallback for ${req.path} -> ${indexPath}`);
-      res.sendFile(indexPath);
-    });
-  }
-
-  if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running at http://localhost:${PORT}`);
+      console.log(`Development server running at http://localhost:${PORT}`);
     });
   }
 }
 
-export default app; // Export for Vercel
-startServer();
+if (process.env.NODE_ENV !== 'production') {
+  setupDev();
+} else if (!process.env.VERCEL) {
+  // Direct production run (e.g. Cloud Run)
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Production server running at http://localhost:${PORT}`);
+  });
+}
+
+export default app;
