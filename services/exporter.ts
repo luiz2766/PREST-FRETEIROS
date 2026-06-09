@@ -17,7 +17,7 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
     ['Placa:', header.placa],
     ['Data de Prestação:', header.dataPrestacao],
     [''],
-    ['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Vale', 'KM Saída', 'KM Chegada', 'Outros', 'Valor Frete', 'Total Líquido']
+    ['Data', 'Romaneio', 'Região', 'Vale', 'Retorno zero', 'KM Saída', 'KM Chegada', 'KM Realizado', 'Outros', 'Valor Frete', 'Total Líquido']
   ];
 
   items.forEach(i => {
@@ -25,12 +25,11 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
       i.data,
       i.romaneio,
       i.regiao,
-      i.produtos || '',
-      i.quantidadeCx || 0,
-      i.quantidadeUn || 0,
       i.vale || 0,
+      i.retornoZero || 0,
       i.kmSaida || 0,
       i.kmChegada || 0,
+      i.kmRealizado || 0,
       i.diarista || 0,
       i.valorFrete,
       i.valorTotal
@@ -38,13 +37,14 @@ export const generateExcel = async (header: ReportHeader, items: RomaneioItem[],
   });
 
   aoaData.push(['']);
-  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'OUTROS (AJUDANTES):', totalDiarista]);
-  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL VALES:', totalVale]);
-  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL FRETE:', totalFrete]);
-  aoaData.push(['', '', '', '', '', '', '', '', '', '', 'TOTAL LÍQUIDO:', totalGeral]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', 'RETORNO ZERO:', items.reduce((sum, i) => sum + (i.retornoZero || 0), 0)]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', 'OUTROS (AJUDANTES):', totalDiarista]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', 'TOTAL VALES:', totalVale]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', 'TOTAL FRETE:', totalFrete]);
+  aoaData.push(['', '', '', '', '', '', '', '', '', 'TOTAL LÍQUIDO:', totalGeral]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoaData);
-  const colWidths = [{ wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+  const colWidths = [{ wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }];
   ws['!cols'] = colWidths;
 
   const wb = XLSX.utils.book_new();
@@ -74,15 +74,14 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
   
   autoTable(doc, {
     startY: 45,
-    head: [['Data', 'Romaneio', 'Região', 'Produtos', 'CX', 'UN', 'Vale', 'Outros', 'V. Frete', 'Total Líq']],
+    head: [['Data', 'Romaneio', 'Região', 'Vale', 'Retorn. 0', 'KM Realiz.', 'Outros', 'V. Frete', 'Total Líq']],
     body: items.map(i => [
       i.data, 
       i.romaneio, 
       i.regiao, 
-      i.produtos || '-',
-      i.quantidadeCx || 0,
-      i.quantidadeUn || 0,
       formatCurrency(i.vale),
+      formatCurrency(i.retornoZero),
+      i.kmRealizado,
       formatCurrency(i.diarista), 
       formatCurrency(i.valorFrete), 
       formatCurrency(i.valorTotal)
@@ -93,14 +92,16 @@ export const generatePdf = async (header: ReportHeader, items: RomaneioItem[], t
   });
   
   const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const totalRetornoZero = items.reduce((sum, i) => sum + (i.retornoZero || 0), 0);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text(`OUTROS: ${formatCurrency(totalDiarista)}`, pageWidth - 14, finalY, { align: 'right' });
-  doc.text(`TOTAL VALES: ${formatCurrency(totalVale)}`, pageWidth - 14, finalY + 5, { align: 'right' });
-  doc.text(`TOTAL FRETE: ${formatCurrency(totalFrete)}`, pageWidth - 14, finalY + 10, { align: 'right' });
+  doc.text(`RETORNO ZERO: ${formatCurrency(totalRetornoZero)}`, pageWidth - 14, finalY, { align: 'right' });
+  doc.text(`OUTROS: ${formatCurrency(totalDiarista)}`, pageWidth - 14, finalY + 5, { align: 'right' });
+  doc.text(`TOTAL VALES: ${formatCurrency(totalVale)}`, pageWidth - 14, finalY + 10, { align: 'right' });
+  doc.text(`TOTAL FRETE: ${formatCurrency(totalFrete)}`, pageWidth - 14, finalY + 15, { align: 'right' });
   doc.setFontSize(11);
   doc.setTextColor(37, 99, 235);
-  doc.text(`TOTAL LÍQUIDO A PAGAR: ${formatCurrency(totalGeral)}`, pageWidth - 14, finalY + 17, { align: 'right' });
+  doc.text(`TOTAL LÍQUIDO A PAGAR: ${formatCurrency(totalGeral)}`, pageWidth - 14, finalY + 22, { align: 'right' });
 
   doc.save(`prestacao_${header.prestador || 'frete'}.pdf`);
 };

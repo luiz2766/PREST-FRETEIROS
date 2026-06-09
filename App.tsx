@@ -61,10 +61,11 @@ const App: React.FC = () => {
     const kmSaida = item.kmSaida ?? null;
     const kmChegada = item.kmChegada ?? null;
     const kmRodado = (kmSaida !== null && kmChegada !== null) ? (kmChegada - kmSaida) : 0;
+    const kmRealizado = kmRodado; // For now they are same, user requested descriptive name
     const valorFrete = FRETE_TABLE[item.regiao || Regiao.NOT_FOUND][perfil];
     
-    // Total = Freight + Diarista - Vale
-    const valorTotal = valorFrete + (item.diarista || 0) - (item.vale || 0);
+    // Total = Freight + Diarista + RetornoZero - Vale
+    const valorTotal = valorFrete + (item.diarista || 0) + (item.retornoZero || 0) - (item.vale || 0);
 
     return {
       id: item.id || Math.random().toString(36).substr(2, 9),
@@ -74,12 +75,10 @@ const App: React.FC = () => {
       kmSaida,
       kmChegada,
       kmRodado,
+      kmRealizado,
       retornoZero: item.retornoZero || 0,
       diarista: item.diarista || 0,
       valorFrete,
-      produtos: item.produtos || '',
-      quantidadeCx: item.quantidadeCx || 0,
-      quantidadeUn: item.quantidadeUn || 0,
       vale: item.vale || 0,
       valorTotal
     } as RomaneioItem;
@@ -222,12 +221,10 @@ const App: React.FC = () => {
       kmSaida: item.km_saida,
       kmChegada: item.km_chegada,
       kmRodado: item.km_rodado,
+      kmRealizado: item.km_realizado,
       retornoZero: item.retorno_zero,
       diarista: item.diarista,
       valorFrete: item.valor_frete,
-      produtos: item.produtos,
-      quantidadeCx: item.quantidade_cx,
-      quantidadeUn: item.quantidade_un,
       vale: item.vale,
       valorTotal: item.valor_total
     }));
@@ -295,6 +292,7 @@ const App: React.FC = () => {
 
   const totalFrete = items.reduce((sum, i) => sum + i.valorFrete, 0);
   const totalDiarista = items.reduce((sum, i) => sum + i.diarista, 0);
+  const totalRetornoZero = items.reduce((sum, i) => sum + i.retornoZero, 0);
   const totalVale = items.reduce((sum, i) => sum + i.vale, 0);
   const totalGeral = items.reduce((sum, i) => sum + i.valorTotal, 0);
 
@@ -417,7 +415,7 @@ const App: React.FC = () => {
 
           <DataTable items={items} onUpdateItem={handleUpdateItem} onDeleteItem={handleDeleteItem} />
 
-          <SummaryFooter diarista={totalDiarista} totalFrete={totalFrete} totalVale={totalVale} totalGeral={totalGeral} />
+          <SummaryFooter diarista={totalDiarista} totalRetornoZero={totalRetornoZero} totalFrete={totalFrete} totalVale={totalVale} totalGeral={totalGeral} />
         </div>
       )}
 
@@ -487,7 +485,7 @@ const App: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
-                       <button 
+                        <button 
                           onClick={() => {
                             const totalDiarista = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.diarista) || 0), 0);
                             const totalVale = report.report_items.reduce((sum: number, i: any) => sum + (Number(i.vale) || 0), 0);
@@ -503,11 +501,11 @@ const App: React.FC = () => {
                                 data: i.data,
                                 romaneio: i.romaneio,
                                 regiao: i.regiao,
-                                produtos: i.produtos,
-                                quantidadeCx: i.quantidade_cx,
-                                quantidadeUn: i.quantidade_un,
                                 kmSaida: i.km_saida,
                                 kmChegada: i.km_chegada,
+                                kmRodado: i.km_rodado,
+                                kmRealizado: i.km_realizado,
+                                retornoZero: i.retorno_zero,
                                 diarista: i.diarista,
                                 valorFrete: i.valor_frete,
                                 vale: i.vale,
@@ -536,11 +534,11 @@ const App: React.FC = () => {
                                 data: i.data,
                                 romaneio: i.romaneio,
                                 regiao: i.regiao,
-                                produtos: i.produtos,
-                                quantidadeCx: i.quantidade_cx,
-                                quantidadeUn: i.quantidade_un,
                                 kmSaida: i.km_saida,
                                 kmChegada: i.km_chegada,
+                                kmRodado: i.km_rodado,
+                                kmRealizado: i.km_realizado,
+                                retornoZero: i.retorno_zero,
                                 diarista: i.diarista,
                                 valorFrete: i.valor_frete,
                                 vale: i.vale,
@@ -587,10 +585,10 @@ const App: React.FC = () => {
                         <th className="px-6 py-4">Data</th>
                         <th className="px-6 py-4">Romaneio</th>
                         <th className="px-6 py-4">Região</th>
-                        <th className="px-6 py-4">Produtos</th>
+                        <th className="px-6 py-4 text-right">Retorno 0</th>
                         <th className="px-6 py-4 text-right">Frete</th>
                         <th className="px-6 py-4 text-right">Vale</th>
-                        <th className="px-6 py-4 text-right">Líquido</th>
+                        <th className="px-6 py-4 text-right">Liquido</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -599,7 +597,7 @@ const App: React.FC = () => {
                           <td className="px-6 py-4 font-medium">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
                           <td className="px-6 py-4 font-bold text-gray-500">{item.romaneio}</td>
                           <td className="px-6 py-4">{item.regiao}</td>
-                          <td className="px-6 py-4 italic text-gray-400">{item.produtos || '-'}</td>
+                          <td className="px-6 py-4 text-right text-indigo-600 font-bold">R$ {item.retorno_zero}</td>
                           <td className="px-6 py-4 text-right">R$ {item.valor_frete}</td>
                           <td className="px-6 py-4 text-right text-red-500">-R$ {item.vale}</td>
                           <td className="px-6 py-4 text-right font-black text-gray-900">R$ {item.valor_total}</td>

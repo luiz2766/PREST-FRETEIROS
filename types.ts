@@ -23,12 +23,10 @@ export interface RomaneioItem {
   kmSaida: number | null;
   kmChegada: number | null;
   kmRodado: number;
+  kmRealizado: number;
   retornoZero: number;
   diarista: number;
   valorFrete: number;
-  produtos: string;
-  quantidadeCx: number;
-  quantidadeUn: number;
   vale: number;
   valorTotal: number;
 }

@@ -107,12 +107,10 @@ app.post('/api/reports', async (req, res) => {
       km_saida: item.kmSaida,
       km_chegada: item.kmChegada,
       km_rodado: item.kmRodado,
+      km_realizado: item.kmRealizado,
       retorno_zero: item.retornoZero,
       diarista: item.diarista,
       valor_frete: item.valorFrete,
-      produtos: item.produtos,
-      quantidade_cx: item.quantidadeCx,
-      quantidade_un: item.quantidadeUn,
       vale: item.vale,
       valor_total: item.valorTotal
     }));
@@ -178,12 +176,10 @@ app.put('/api/reports/:id', async (req, res) => {
       km_saida: item.kmSaida,
       km_chegada: item.kmChegada,
       km_rodado: item.kmRodado,
+      km_realizado: item.kmRealizado,
       retorno_zero: item.retornoZero,
       diarista: item.diarista,
       valor_frete: item.valorFrete,
-      produtos: item.produtos,
-      quantidade_cx: item.quantidadeCx,
-      quantidade_un: item.quantidadeUn,
       vale: item.vale,
       valor_total: item.valorTotal
     }));
@@ -243,6 +239,7 @@ app.get('/api/dashboard', async (req, res) => {
       totalValorFrete: data.reduce((sum, i) => sum + (Number(i.valor_frete) || 0), 0),
       totalFretes: data.length,
       totalDiarista: data.reduce((sum, i) => sum + (Number(i.diarista) || 0), 0),
+      totalRetornoZero: data.reduce((sum, i) => sum + (Number(i.retorno_zero) || 0), 0),
       totalVales: data.reduce((sum, i) => sum + (Number(i.vale) || 0), 0),
       totalGeral: data.reduce((sum, i) => sum + (Number(i.valor_total) || 0), 0),
       topRegioes: [] as { regiao: string; total: number }[],

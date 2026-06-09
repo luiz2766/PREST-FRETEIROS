@@ -20,12 +20,10 @@ CREATE TABLE report_items (
   km_saida NUMERIC,
   km_chegada NUMERIC,
   km_rodado NUMERIC,
+  km_realizado NUMERIC DEFAULT 0,
   retorno_zero NUMERIC DEFAULT 0,
   diarista NUMERIC DEFAULT 0,
   valor_frete NUMERIC DEFAULT 0,
-  produtos TEXT,
-  quantidade_cx INTEGER DEFAULT 0,
-  quantidade_un INTEGER DEFAULT 0,
   vale NUMERIC DEFAULT 0,
   valor_total NUMERIC DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

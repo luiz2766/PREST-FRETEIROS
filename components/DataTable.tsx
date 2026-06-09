@@ -23,13 +23,12 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
               <th className="px-4 py-4 min-w-[120px]">Data</th>
               <th className="px-4 py-4 min-w-[100px]">Romaneio</th>
               <th className="px-4 py-4 min-w-[160px]">Região</th>
-              <th className="px-4 py-4 min-w-[140px]">Produtos</th>
-              <th className="px-4 py-4 min-w-[60px]">CX</th>
-              <th className="px-4 py-4 min-w-[60px]">UN</th>
+              <th className="px-4 py-4 min-w-[90px]">Retorno Zero</th>
               <th className="px-4 py-4 min-w-[100px]">Vale</th>
               <th className="px-4 py-4 min-w-[100px]">KM Saída</th>
               <th className="px-4 py-4 min-w-[100px]">KM Chegada</th>
-              <th className="px-4 py-4 min-w-[100px]">Outros</th>
+              <th className="px-4 py-4 min-w-[100px]">KM Realiz.</th>
+              <th className="px-4 py-4 min-w-[100px]">Ajudante</th>
               <th className="px-4 py-4 min-w-[120px]">Vlr Frete</th>
               <th className="px-4 py-4 min-w-[120px]">Total Líq</th>
               <th className="px-4 py-4 text-center">Ações</th>
@@ -73,29 +72,16 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <input
-                      type="text"
-                      value={item.produtos}
-                      placeholder="Produtos..."
-                      onChange={(e) => onUpdateItem(item.id, { produtos: e.target.value })}
-                      className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none italic text-gray-500"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      value={item.quantidadeCx || ''}
-                      onChange={(e) => onUpdateItem(item.id, { quantidadeCx: Number(e.target.value) })}
-                      className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none text-center"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      value={item.quantidadeUn || ''}
-                      onChange={(e) => onUpdateItem(item.id, { quantidadeUn: Number(e.target.value) })}
-                      className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none text-center"
-                    />
+                    <div className="flex items-center">
+                      <span className="text-[10px] text-gray-400 mr-1">R$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={item.retornoZero || ''}
+                        onChange={(e) => onUpdateItem(item.id, { retornoZero: Number(e.target.value) })}
+                        className="w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none font-medium text-indigo-600"
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center">
@@ -126,6 +112,9 @@ const DataTable: React.FC<DataTableProps> = ({ items, onUpdateItem, onDeleteItem
                       onChange={(e) => onUpdateItem(item.id, { kmChegada: e.target.value === '' ? null : Number(e.target.value) })}
                       className={`w-full bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 rounded p-1 outline-none text-xs ${isKmError ? 'text-red-600' : ''}`}
                     />
+                  </td>
+                  <td className="px-4 py-3 font-bold text-gray-500 text-xs">
+                    {item.kmRealizado} km
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center">
