@@ -227,6 +227,7 @@ app.get('/api/dashboard', async (req, res) => {
       .select(`
         valor_frete,
         diarista,
+        retorno_zero,
         vale,
         valor_total,
         regiao,
@@ -241,7 +242,8 @@ app.get('/api/dashboard', async (req, res) => {
       totalDiarista: data.reduce((sum, i) => sum + (Number(i.diarista) || 0), 0),
       totalRetornoZero: data.reduce((sum, i) => sum + (Number(i.retorno_zero) || 0), 0),
       totalVales: data.reduce((sum, i) => sum + (Number(i.vale) || 0), 0),
-      totalGeral: data.reduce((sum, i) => sum + (Number(i.valor_total) || 0), 0),
+      totalGeral: data.reduce((sum, i) => 
+        sum + (Number(i.valor_frete) || 0) + (Number(i.diarista) || 0) + (Number(i.retorno_zero) || 0), 0),
       topRegioes: [] as { regiao: string; total: number }[],
       mediaFretePorDia: 0
     };

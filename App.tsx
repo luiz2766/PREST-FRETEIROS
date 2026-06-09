@@ -64,8 +64,8 @@ const App: React.FC = () => {
     const kmRealizado = kmRodado; // For now they are same, user requested descriptive name
     const valorFrete = FRETE_TABLE[item.regiao || Regiao.NOT_FOUND][perfil];
     
-    // Total = Freight + Diarista + RetornoZero - Vale
-    const valorTotal = valorFrete + (item.diarista || 0) + (item.retornoZero || 0) - (item.vale || 0);
+    // Total = Freight + Diarista + RetornoZero (Vales are now personal advances and don't subtract from the company's payment obligation in the final liquid)
+    const valorTotal = valorFrete + (item.diarista || 0) + (item.retornoZero || 0);
 
     return {
       id: item.id || Math.random().toString(36).substr(2, 9),
@@ -572,7 +572,8 @@ const App: React.FC = () => {
                       <p className="text-xs font-bold text-gray-400 uppercase">Total Líquido</p>
                       <p className="text-2xl font-black text-blue-600">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                          report.report_items.reduce((sum: number, i: any) => sum + (Number(i.valor_total) || 0), 0)
+                          report.report_items.reduce((sum: number, i: any) => 
+                            sum + (Number(i.valor_frete) || 0) + (Number(i.diarista) || 0) + (Number(i.retorno_zero) || 0), 0)
                         )}
                       </p>
                     </div>
