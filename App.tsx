@@ -22,7 +22,7 @@ const App: React.FC = () => {
   
   const [header, setHeader] = useState<ReportHeader>({
     prestador: '',
-    perfilVeiculo: PerfilVeiculo.VUC,
+    perfilVeiculo: PerfilVeiculo.TOQUINHO,
     placa: '',
     dataPrestacao: '' 
   });

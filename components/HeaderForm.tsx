@@ -36,7 +36,7 @@ const HeaderForm: React.FC<HeaderFormProps> = ({ header, onChange }) => {
             onChange={handleChange}
             className="border border-gray-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
           >
-            <option value={PerfilVeiculo.VUC}>VUC</option>
+            <option value={PerfilVeiculo.TOQUINHO}>TOQUINHO</option>
             <option value={PerfilVeiculo.TOCO}>TOCO</option>
             <option value={PerfilVeiculo.TRUCK}>TRUCK</option>
           </select>

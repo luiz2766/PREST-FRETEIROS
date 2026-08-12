@@ -2,13 +2,13 @@
 import { Regiao, PerfilVeiculo } from './types';
 
 export const FRETE_TABLE: Record<Regiao, Record<PerfilVeiculo, number>> = {
-  [Regiao.R1]: { [PerfilVeiculo.VUC]: 546.00, [PerfilVeiculo.TOCO]: 597.48, [PerfilVeiculo.TRUCK]: 686.40 },
-  [Regiao.R2]: { [PerfilVeiculo.VUC]: 580.32, [PerfilVeiculo.TOCO]: 647.40, [PerfilVeiculo.TRUCK]: 744.12 },
-  [Regiao.R3]: { [PerfilVeiculo.VUC]: 656.76, [PerfilVeiculo.TOCO]: 755.04, [PerfilVeiculo.TRUCK]: 870.48 },
-  [Regiao.R4]: { [PerfilVeiculo.VUC]: 639.60, [PerfilVeiculo.TOCO]: 730.08, [PerfilVeiculo.TRUCK]: 870.48 },
-  [Regiao.R5]: { [PerfilVeiculo.VUC]: 700.44, [PerfilVeiculo.TOCO]: 819.00, [PerfilVeiculo.TRUCK]: 945.36 },
-  [Regiao.R6]: { [PerfilVeiculo.VUC]: 773.76, [PerfilVeiculo.TOCO]: 921.96, [PerfilVeiculo.TRUCK]: 1065.48 },
-  [Regiao.NOT_FOUND]: { [PerfilVeiculo.VUC]: 0, [PerfilVeiculo.TOCO]: 0, [PerfilVeiculo.TRUCK]: 0 },
+  [Regiao.R1]: { [PerfilVeiculo.TOQUINHO]: 622.44, [PerfilVeiculo.TOCO]: 681.12, [PerfilVeiculo.TRUCK]: 782.49 },
+  [Regiao.R2]: { [PerfilVeiculo.TOQUINHO]: 661.56, [PerfilVeiculo.TOCO]: 738.36, [PerfilVeiculo.TRUCK]: 848.29 },
+  [Regiao.R3]: { [PerfilVeiculo.TOQUINHO]: 748.70, [PerfilVeiculo.TOCO]: 860.74, [PerfilVeiculo.TRUCK]: 992.34 },
+  [Regiao.R4]: { [PerfilVeiculo.TOQUINHO]: 729.14, [PerfilVeiculo.TOCO]: 832.29, [PerfilVeiculo.TRUCK]: 992.34 },
+  [Regiao.R5]: { [PerfilVeiculo.TOQUINHO]: 798.50, [PerfilVeiculo.TOCO]: 933.66, [PerfilVeiculo.TRUCK]: 1077.71 },
+  [Regiao.R6]: { [PerfilVeiculo.TOQUINHO]: 882.08, [PerfilVeiculo.TOCO]: 1051.03, [PerfilVeiculo.TRUCK]: 1214.64 },
+  [Regiao.NOT_FOUND]: { [PerfilVeiculo.TOQUINHO]: 0, [PerfilVeiculo.TOCO]: 0, [PerfilVeiculo.TRUCK]: 0 },
 };
 
 /**

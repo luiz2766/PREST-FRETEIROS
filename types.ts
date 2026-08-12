@@ -1,6 +1,6 @@
 
 export enum PerfilVeiculo {
-  VUC = 'VUC',
+  TOQUINHO = 'TOQUINHO',
   TOCO = 'TOCO',
   TRUCK = 'TRUCK'
 }
